@@ -1,9 +1,12 @@
-h1 Listing events
+h1 Events
 
 div.event_list
-	table.event_table.table.table-bordered.table-hover
-		tr
-			th Name
-			th Current?
-			th Actions
-		= render @events
+  table.event_table.table
+    thead
+      tr			
+        th Current
+        th Name
+        th Resolution
+        th Actions
+      tbody.table-hover
+        = render @events

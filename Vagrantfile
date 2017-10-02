@@ -26,7 +26,7 @@ Vagrant.configure("2") do |config|
   # accessing "localhost:8080" will access port 80 on the guest machine.
 
   # forward the default rails development port
-  config.vm.network "forwarded_port", guest: 3000, host: 3000
+  config.vm.network "forwarded_port", guest: 12765, host: 12765, host_ip: "127.0.0.1"
 
   # Create a private network, which allows host-only access to the machine
   # using a specific IP.
@@ -74,7 +74,7 @@ Vagrant.configure("2") do |config|
     echo "deb http://ftp.debian.org/debian jessie-backports main" >> /etc/apt/sources.list
     apt-get update
     apt-get install -y gnupg2 redis-server memcached imagemagick postgresql postgresql-client libpq-dev rrdtool librrd4 librrd-dev git curl nodejs
-    apt-get -t jessie-backports install -y inkscape
+    apt-get -t jessie-backports install -y inkscape graphviz
     # Create postgresql user and database
     su postgres -c "psql -c \\"CREATE ROLE vagrant SUPERUSER LOGIN PASSWORD 'vagrant'\\" "
     su postgres -c "createdb -E UTF8 --locale=en_US.UTF-8 -O vagrant isk_development"
@@ -87,14 +87,14 @@ Vagrant.configure("2") do |config|
     curl -sSL https://get.rvm.io | bash -s stable --ruby
     source ~/.rvm/scripts/rvm
     rvm requirements
-    rvm install 2.3.0
-    rvm use 2.3.0
+	
+    # Install rubygems for ISK
+    cd /vagrant
+    rvm install 2.3.3
+    rvm use 2.3.3
     rvm gemset create isk
     rvm gemset use isk
     gem install bundler
-
-    # Install rubygems for ISK
-    cd /vagrant
     bundle install
 
     # Setup the database

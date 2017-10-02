@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
-
+# 
 # ISK - A web controllable slideshow system
 #
 # Script for starting and stopping all the various processes
@@ -20,15 +20,19 @@ Services = [
   "server",
   "resque",
   "background_jobs",
-  "rrd_monitoring"
+  "rrd_monitoring" 
 ].freeze
 RedisOptions = { host: "localhost", port: 6379 }.freeze
 MemcachedIP = "localhost:11211"
 MemcachedOptions = { namespace: "ISK", compress: true }.freeze
 
 # Check that all the needed external binaries are present
-def check_deps
+def check_deps  
   puts "Checking that needed external dependencies are met..."
+  unless File.exists?(PidDirectory)
+    puts "Creating pids directory..."
+    Dir.mkdir(PidDirectory, 755)
+  end
   unless find_executable "inkscape"
     abort "ERROR: ISK needs inkscape to function".red
   end
@@ -42,10 +46,20 @@ def check_deps
 end
 
 def start_service(process)
+  do_start = false
   case process
   when "server"
     print "Starting the web server process...".ljust(45)
-    command = "bundle exec puma -C config/puma.rb > /dev/null"
+    pid_file = File.join(PidDirectory, "server.pid")
+    if File.exist? pid_file
+      pid = File.read(pid_file).to_i
+      if `ps -o args -p #{pid}` =~ /puma/
+        puts "RUNNING".yellow + " (pid #{pid})"           
+      end
+    else 
+      do_start = true
+      command = "bundle exec puma -C config/puma.rb > /dev/null &"
+    end
   when "resque"
     print "Starting the Resque worker...".ljust(45)
     # Resque doesn't check its pid file and refuse to start if already running
@@ -54,27 +68,47 @@ def start_service(process)
     if File.exist? pid_file
       pid = File.read(pid_file).to_i
       if `ps -o args -p #{pid}` =~ /resque/
-        puts "FAILED".red
-        puts "Resque worker already running with pid #{pid}"
-        abort
+        puts "RUNNING".yellow + " (pid #{pid})"      
       end
-    end
-    command = "TERM_CHILD=1 BACKGROUND=yes PIDFILE=tmp/pids/resque.pid QUEUE=* rake resque:work"
+    else
+      do_start = true
+      command = "TERM_CHILD=1 BACKGROUND=yes PIDFILE=tmp/pids/resque.pid QUEUE=* rake resque:work"                  
+    end    
   when "background_jobs"
     print "Starting the timed background jobs worker...".ljust(45)
-    command = "script/background_jobs.rb start > /dev/null"
+    pid_file = File.join(PidDirectory, "background_jobs.pid")
+    if File.exist? pid_file
+      pid = File.read(pid_file).to_i
+      if `ps -o args -p #{pid}` =~ /background_jobs/
+        puts "RUNNING".yellow + " (pid #{pid})"     
+      end
+    else        
+      do_start = true
+      command = "script/background_jobs.rb start > /dev/null"
+    end
   when "rrd_monitoring"
     print "Starting the RRD data logger process...".ljust(45)
-    command = "script/rrd_monitoring.rb start > /dev/null"
+    pid_file = File.join(PidDirectory, "rrd_monitoring.pid")
+    if File.exist? pid_file
+      pid = File.read(pid_file).to_i
+      if `ps -o args -p #{pid}` =~ /rrd_monitoring/
+        puts "RUNNING".yellow + " (pid #{pid})"     
+      end
+    else        
+      do_start = true
+      command = "script/rrd_monitoring.rb start > /dev/null"
+    end    
   else
     abort "ERROR: Unkown process to start: #{process}".red
   end
-  if system(command)
-    puts "Success".green
-  else
-    puts "FAILED".red
-    abort
-  end
+  if do_start == true
+    if system(command)
+      puts "Success".green      
+    else
+      puts "FAILED".red
+      abort
+    end    
+  end    
   return true
 end
 
@@ -98,13 +132,14 @@ def stop_service(process)
 
   pid_file = File.join(PidDirectory, pid_file)
   unless File.exist?(pid_file)
-    puts "Not running".yellow
+    puts "Not running".yellow    
     return true
   end
   pid = File.read(pid_file).to_i
 
   unless `ps -p #{pid}`.match pid.to_s
     puts "Not running".yellow
+    File.unlink(pid_file)
     return true
   end
 
@@ -119,6 +154,9 @@ def stop_service(process)
       end
     end
     puts "Success".green
+    if File.exist?(pid_file)
+      File.unlink(pid_file)
+    end
   rescue Timeout::Error
     puts "Sending SIGKILL".yellow
     Process.kill("KILL", pid)

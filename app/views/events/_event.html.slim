@@ -1,8 +1,10 @@
 tr class=event_current_class(event)
-	td = link_to event.name, event_path(event)
-	td = event.current ? 'Current' : ''
-	td
-		div.btn-group.btn-group-sm
-			= event_edit_button(event)
-			= event_details_button(event)
-			/=< event_delete_button(event)
+  td = event.current ? 'Active' : ''	
+  td = link_to event.name, edit_event_path(event)
+  td = event_get_resolution(event)
+  td
+    div.btn-group.btn-group-sm
+      = event_edit_button(event)
+      = event_details_button(event)
+      = event_generate_images_button(event)
+      /=< event_delete_button(event)

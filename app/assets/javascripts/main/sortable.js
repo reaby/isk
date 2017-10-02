@@ -5,7 +5,7 @@ $(document).ready(function() {
 		var data = {
 			element_id: ui.item.attr('id').split('_').pop(),
 			element_position: ui.item.index()
-		}
+		};
 		$.ajax({
 					type: "POST",
 					url: $('[data-sortable]').attr('data-sortable'),

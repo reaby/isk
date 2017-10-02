@@ -39,6 +39,16 @@ module EventsHelper
     "success"
   end
 
+  # 
+  def event_get_resolution(event)
+    resolutions = Event::SupportedResolutions   
+    options = resolutions.collect.with_index do |r, i|
+      "#{r.first} x #{r.last}"
+    end
+    
+    return options[event.resolution]
+  end
+  
   # Select box for choosing the slide resolution for the event.
   def event_slide_resolution_select(event)
     resolutions = Event::SupportedResolutions
@@ -62,5 +72,15 @@ module EventsHelper
       title: "Regenerate all slide images, this will take a long time."
     }
     link_to "Regenerate images", generate_images_event_path(event), options
+  end
+  
+  def event_generate_images_button(event)
+    options = {
+      class: "btn btn-danger",
+      method: :post,
+      data: { confirm: "This operation will take a long time, are you sure?" },
+      title: "Regenerate all slide images, this will take a long time."
+    }
+    link_to "Regen", generate_images_event_path(event), options      
   end
 end
